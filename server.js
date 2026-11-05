@@ -109,7 +109,7 @@ function createVless(t) {
 
   function parseHeader() {
     if (buf.length < 18) return true;
-    if (!buf.subarray(1, 17).equals(UUID_BUF)) { destroy(); return true; }
+    if (!buf.subarray(1, 17).equals(UUID_BUF)) { console.log('[reject] wrong UUID'); destroy(); return true; }
     ver = buf[0];
     let p = 18 + buf[17];
     if (buf.length < p + 4) return true;
@@ -134,13 +134,15 @@ function createVless(t) {
       for (let i = 0; i < 8; i++) g.push(buf.readUInt16BE(p + i * 2).toString(16));
       host = g.join(':');
       p += 16;
-    } else { destroy(); return true; }
+    } else { console.log('[reject] bad address type', at); destroy(); return true; }
 
     const rest = buf.subarray(p);
     buf = EMPTY;
-    if (isPrivate(host)) { destroy(); return true; }
+    if (isPrivate(host)) { console.log('[reject] private/blocked destination', host); destroy(); return true; }
+    if (process.env.DEBUG) console.log('[conn] cmd', cmd, host + ':' + port);
     if (cmd === 1) return startTcp(host, port, rest);
     if (cmd === 2) return startUdp(host, port, rest);
+    console.log('[reject] unsupported command', cmd, '(3 = Mux: turn Mux/xudp off on the client)');
     destroy(); // mux (cmd 3) is not supported -> disable Mux on the client
     return true;
   }
